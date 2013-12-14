@@ -18,7 +18,9 @@ package com.android.internal.telephony.dataconnection;
 
 import android.app.PendingIntent;
 import android.content.Context;
+import android.net.NetworkConfig;
 import android.telephony.Rlog;
+import android.text.TextUtils;
 
 import com.android.internal.R;
 import com.android.internal.telephony.DctConstants;
@@ -47,6 +49,8 @@ public class ApnContext {
 
     private ArrayList<ApnSetting> mWaitingApns = null;
 
+    public final int priority;
+
     /** A zero indicates that all waiting APNs had a permanent error */
     private AtomicInteger mWaitingApnsPermanentFailureCountDown;
 
@@ -68,14 +72,15 @@ public class ApnContext {
      */
     AtomicBoolean mDependencyMet;
 
-    public ApnContext(Context context, String apnType, String logTag) {
+    public ApnContext(Context context, String apnType, String logTag, NetworkConfig config) {
         mContext = context;
         mApnType = apnType;
         mState = DctConstants.State.IDLE;
         setReason(Phone.REASON_DATA_ENABLED);
         mDataEnabled = new AtomicBoolean(false);
-        mDependencyMet = new AtomicBoolean(true);
+        mDependencyMet = new AtomicBoolean(config.dependencyMet);
         mWaitingApnsPermanentFailureCountDown = new AtomicInteger(0);
+        priority = config.priority;
         LOG_TAG = logTag;
     }
 
@@ -229,6 +234,9 @@ public class ApnContext {
     public boolean isProvisioningApn() {
         String provisioningApn = mContext.getResources()
                 .getString(R.string.mobile_provisioning_apn);
+        if (TextUtils.isEmpty(provisioningApn)) {
+            return false;
+        }
         if ((mApnSetting != null) && (mApnSetting.apn != null)) {
             return (mApnSetting.apn.equals(provisioningApn));
         } else {
