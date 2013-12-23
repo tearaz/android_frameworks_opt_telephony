@@ -263,6 +263,7 @@ public class CdmaLteServiceStateTracker extends CdmaServiceStateTracker {
         if (mNewSS.getDataRegState() != ServiceState.STATE_IN_SERVICE && oldRil) {
             // LTE out of service, get CDMA Service State
             mNewRilRadioTechnology = mNewSS.getRilVoiceRadioTechnology();
+            mNewSS.setDataRegState(radioTechnologyToDataServiceState(mNewRilRadioTechnology));
             mNewSS.setRilDataRadioTechnology(mNewRilRadioTechnology);
             log("pollStateDone CDMA STATE_IN_SERVICE mNewRilRadioTechnology = " +
                     mNewRilRadioTechnology + " mNewSS.getDataRegState() = " +
@@ -455,11 +456,10 @@ public class CdmaLteServiceStateTracker extends CdmaServiceStateTracker {
             mPhone.notifyServiceStateChanged(mSS);
         }
 
-        // First notify detached, then rat changed, then attached - that's the way it
-        // happens in the modem.
-        // Behavior of recipients (DcTracker, for instance) depends on this sequence
-        // since DcTracker reloads profiles on "rat_changed" notification and sets up
-        // data call on "attached" notification.
+        if (hasCdmaDataConnectionAttached || has4gHandoff) {
+            mAttachedRegistrants.notifyRegistrants();
+        }
+
         if (hasCdmaDataConnectionDetached) {
             mDetachedRegistrants.notifyRegistrants();
         }
@@ -467,10 +467,6 @@ public class CdmaLteServiceStateTracker extends CdmaServiceStateTracker {
         if ((hasCdmaDataConnectionChanged || hasDataRadioTechnologyChanged)) {
             notifyDataRegStateRilRadioTechnologyChanged();
             mPhone.notifyDataConnection(null);
-        }
-
-        if (hasCdmaDataConnectionAttached || has4gHandoff) {
-            mAttachedRegistrants.notifyRegistrants();
         }
 
         if (hasRoamingOn) {
